@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { useEffect, useMemo, useState } from 'react'
 
 import { BackTopButton } from '@/components/back-top-button'
 import { EmptyState } from '@/components/empty-state'
@@ -11,6 +12,7 @@ import { sortComicChapters } from '@/lib/comic'
 import { CACHE } from '@/lib/constants'
 import { queryKeys } from '@/lib/query-keys'
 import { ChaptersSection } from './chapters'
+import { resolveCanonicalComicRedirect } from './canonical-redirect'
 import { CommentsDrawer } from './comments'
 import { ComicHero } from './hero'
 import { RelatedPanel } from './related'
@@ -22,6 +24,7 @@ import { useComicFavorite } from './use-comic-favorite'
 import { useComicReaderPreload } from './use-comic-reader-preload'
 
 export function ComicDetailPage({ comicId }: { comicId: string }) {
+  const navigate = useNavigate()
   const detail = useQuery({
     queryKey: queryKeys.comicDetail(comicId),
     queryFn: () => getComicDetail(comicId),
@@ -37,13 +40,24 @@ export function ComicDetailPage({ comicId }: { comicId: string }) {
     refetchOnMount: true,
     refetchOnWindowFocus: true
   })
+  const canonicalRedirectId = resolveCanonicalComicRedirect(comicId, detail.data?.comic.canonicalId)
+
+  useEffect(() => {
+    if (canonicalRedirectId == null) return
+
+    void navigate({
+      to: '/comic/$comicId',
+      params: { comicId: canonicalRedirectId },
+      replace: true
+    })
+  }, [canonicalRedirectId, navigate])
 
   return (
     <main className="min-h-screen bg-background px-4 pt-6 pb-24 text-foreground sm:px-6 md:pb-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-8">
         <PageBackButton />
 
-        {detail.isLoading ? (
+        {detail.isLoading || canonicalRedirectId != null ? (
           <ComicDetailSkeleton />
         ) : detail.isError ? (
           <EmptyState

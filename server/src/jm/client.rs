@@ -196,8 +196,11 @@ impl Default for JmClient {
 }
 
 fn map_comic_detail_payload(payload: ComicDetailPayload) -> ComicDetail {
+    let canonical_id = canonical_comic_id(&payload.id, &payload.series_id);
+
     ComicDetail {
         id: payload.id,
+        canonical_id,
         title: payload.name,
         description: payload.description,
         image: payload.image,
@@ -228,6 +231,21 @@ fn map_comic_detail_payload(payload: ComicDetailPayload) -> ComicDetail {
                 sort: chapter.sort,
             })
             .collect(),
+    }
+}
+
+fn canonical_comic_id(response_id: &str, series_id: &str) -> String {
+    let candidate = series_id.trim();
+    let is_positive_numeric_id = !candidate.is_empty()
+        && candidate
+            .chars()
+            .all(|character| character.is_ascii_digit())
+        && candidate.chars().any(|character| character != '0');
+
+    if is_positive_numeric_id {
+        candidate.to_string()
+    } else {
+        response_id.to_string()
     }
 }
 
@@ -291,6 +309,53 @@ mod tests {
 
         let detail = map_comic_detail_payload(payload);
         assert_eq!(detail.updated_at, None);
+    }
+
+    #[test]
+    fn maps_a_valid_series_id_to_the_canonical_comic_id() {
+        for series_id in [serde_json::json!("1423951"), serde_json::json!(1423951)] {
+            let payload: ComicDetailPayload = serde_json::from_value(serde_json::json!({
+                "id": "1459963",
+                "series_id": series_id,
+                "name": "Chapter alias",
+                "series": [{ "id": "1423951" }]
+            }))
+            .expect("decode comic detail payload");
+
+            let detail = map_comic_detail_payload(payload);
+            assert_eq!(detail.canonical_id, "1423951");
+        }
+    }
+
+    #[test]
+    fn falls_back_to_the_response_id_for_an_invalid_series_id() {
+        for series_id in [
+            serde_json::Value::Null,
+            serde_json::json!(0),
+            serde_json::json!("000"),
+            serde_json::json!("not-an-id"),
+        ] {
+            let payload: ComicDetailPayload = serde_json::from_value(serde_json::json!({
+                "id": "1459963",
+                "series_id": series_id,
+                "name": "Example",
+                "series": [{ "id": "1423951" }]
+            }))
+            .expect("decode comic detail payload");
+
+            let detail = map_comic_detail_payload(payload);
+            assert_eq!(detail.canonical_id, "1459963");
+        }
+
+        let payload: ComicDetailPayload = serde_json::from_value(serde_json::json!({
+            "id": "1459963",
+            "name": "Example",
+            "series": [{ "id": "1423951" }]
+        }))
+        .expect("decode comic detail payload");
+
+        let detail = map_comic_detail_payload(payload);
+        assert_eq!(detail.canonical_id, "1459963");
     }
 }
 

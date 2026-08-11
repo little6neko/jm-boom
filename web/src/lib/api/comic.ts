@@ -18,6 +18,7 @@ type ComicStateResponse = Omit<ComicStateResult, 'readChapterIds'> & {
 
 type ComicDetailResponse = {
   id: string
+  canonicalId?: string | null
   title: string
   description: string
   image: string
@@ -126,6 +127,7 @@ function htmlToText(value: string) {
 function mapComicDetail(response: ComicDetailResponse): ComicDetail {
   return {
     id: response.id,
+    canonicalId: mapComicCanonicalId(response.id, response.canonicalId),
     title: response.title,
     description: response.description,
     image: response.image,
@@ -149,4 +151,8 @@ function mapComicDetail(response: ComicDetailResponse): ComicDetail {
       sort: chapter.sort
     }))
   }
+}
+
+export function mapComicCanonicalId(responseId: string, canonicalId?: string | null) {
+  return canonicalId?.trim() || responseId
 }

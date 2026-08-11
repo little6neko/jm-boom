@@ -157,6 +157,8 @@ pub(crate) struct HomeSectionPayload {
 pub(crate) struct ComicDetailPayload {
     #[serde(deserialize_with = "string_from_any")]
     pub id: String,
+    #[serde(default, deserialize_with = "string_from_any_or_default")]
+    pub series_id: String,
     pub name: String,
     #[serde(default)]
     pub description: String,
@@ -270,6 +272,7 @@ mod tests {
 
         let detail: ComicDetailPayload = serde_json::from_value(serde_json::json!({
             "id": 54321,
+            "series_id": 1423951,
             "name": "detail",
             "addtime": "1786371000",
             "author": "single-author",
@@ -288,6 +291,7 @@ mod tests {
         }))
         .expect("decode mixed comic detail payload");
         assert_eq!(detail.id, "54321");
+        assert_eq!(detail.series_id, "1423951");
         assert_eq!(detail.author, vec!["single-author"]);
         assert_eq!(detail.tags, vec!["7"]);
         assert_eq!(detail.actors, vec!["actor-a", "8", "false"]);

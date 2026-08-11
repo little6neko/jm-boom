@@ -66,6 +66,7 @@ function chapter(id: string, sort: string): ComicChapter {
 function comic(chapters: ComicChapter[]): ComicDetail {
   return {
     id: '100',
+    canonicalId: '100',
     title: 'Title',
     description: '',
     image: '',

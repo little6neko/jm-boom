@@ -9,6 +9,7 @@ use std::collections::HashSet;
 #[serde(rename_all = "camelCase")]
 pub struct ComicDetailResponse {
     id: String,
+    canonical_id: String,
     title: String,
     description: String,
     image: String,
@@ -45,6 +46,7 @@ pub fn map_comic_detail(detail: ComicDetail) -> ComicDetailResponse {
     ComicDetailResponse {
         image: cover_url(&detail.id, &detail.image),
         id: detail.id,
+        canonical_id: detail.canonical_id,
         title: detail.title,
         description: detail.description,
         updated_at: detail.updated_at,
@@ -102,6 +104,7 @@ mod tests {
     fn serializes_the_comic_detail_api_contract() {
         let response = map_comic_detail(ComicDetail {
             id: "123".into(),
+            canonical_id: "100".into(),
             title: "Example".into(),
             description: "Description".into(),
             image: "upstream.jpg".into(),
@@ -131,6 +134,7 @@ mod tests {
             value,
             serde_json::json!({
                 "id": "123",
+                "canonicalId": "100",
                 "title": "Example",
                 "description": "Description",
                 "image": "/api/covers/123",

@@ -1,6 +1,7 @@
 #[derive(Debug, Clone)]
 pub struct ComicDetail {
     pub id: String,
+    pub canonical_id: String,
     pub title: String,
     pub description: String,
     pub image: String,
