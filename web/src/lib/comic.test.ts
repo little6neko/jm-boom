@@ -1,7 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 
 import type { ComicChapter } from '@/domain/comic'
-import { getComicChapterPresentation, sortComicChapters } from './comic'
+import {
+  getComicChapterPresentation,
+  getReadChapterToneClassName,
+  mergeReadChapterIds,
+  sortComicChapters
+} from './comic'
 
 const chapters: ComicChapter[] = [
   { id: '30', title: '', sort: '3' },
@@ -39,5 +44,23 @@ describe('comic chapter presentation', () => {
     expect(getComicChapterPresentation(canonicalChapters[0], canonicalChapters).title).toBe('第3话')
     expect(getComicChapterPresentation(canonicalChapters[1], canonicalChapters).title).toBe('第2话')
     expect(getComicChapterPresentation(canonicalChapters[2], canonicalChapters).title).toBe('第1话')
+  })
+})
+
+describe('read comic chapters', () => {
+  test('adds only the exact opened chapter and keeps existing chapter ids', () => {
+    expect(mergeReadChapterIds(['12'], '15')).toEqual(['12', '15'])
+    expect(mergeReadChapterIds(['12'], '12')).toEqual(['12'])
+    expect(mergeReadChapterIds(['12'], '')).toEqual(['12'])
+  })
+
+  test('uses theme semantic gray only for read non-current chapters', () => {
+    const readClassName = getReadChapterToneClassName({ isRead: true })
+
+    expect(readClassName).toContain('bg-muted')
+    expect(readClassName).toContain('text-muted-foreground')
+    expect(readClassName).not.toMatch(/(?:gray|neutral|slate)-/)
+    expect(getReadChapterToneClassName({ isRead: false })).toBeUndefined()
+    expect(getReadChapterToneClassName({ isRead: true, isCurrent: true })).toBeUndefined()
   })
 })

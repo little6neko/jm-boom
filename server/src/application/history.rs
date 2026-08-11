@@ -147,12 +147,25 @@ impl ReadingHistoryService {
         ))
     }
 
+    pub async fn read_chapter_ids(&self, comic_id: &str) -> anyhow::Result<Vec<String>> {
+        sqlx::query_scalar::<_, String>(
+            "SELECT chapter_id FROM read_chapters \
+             WHERE comic_id = ? ORDER BY read_at ASC, chapter_id ASC",
+        )
+        .bind(comic_id)
+        .fetch_all(&self.db)
+        .await
+        .map_err(Into::into)
+    }
+
     pub async fn upsert(&self, comic_id: &str, input: ReadingHistoryInput) -> anyhow::Result<()> {
         let last_read_at = input
             .last_read_at
             .unwrap_or_else(|| chrono::Utc::now().timestamp_millis());
+        let chapter_id = input.chapter_id.clone();
         let mut transaction = self.db.begin().await?;
         persist_item(&mut transaction, comic_id, input, last_read_at).await?;
+        persist_read_chapter(&mut transaction, comic_id, &chapter_id, last_read_at).await?;
         transaction.commit().await?;
         Ok(())
     }
@@ -162,22 +175,47 @@ impl ReadingHistoryService {
             return Ok(());
         }
 
-        let mut query =
-            QueryBuilder::<Sqlite>::new("DELETE FROM reading_history WHERE comic_id IN (");
+        let mut transaction = self.db.begin().await?;
+        let mut read_chapters_query =
+            QueryBuilder::<Sqlite>::new("DELETE FROM read_chapters WHERE comic_id IN (");
         {
-            let mut ids = query.separated(", ");
+            let mut ids = read_chapters_query.separated(", ");
             for comic_id in comic_ids {
                 ids.push_bind(comic_id);
             }
         }
-        query.push(")").build().execute(&self.db).await?;
+        read_chapters_query
+            .push(")")
+            .build()
+            .execute(&mut *transaction)
+            .await?;
+
+        let mut history_query =
+            QueryBuilder::<Sqlite>::new("DELETE FROM reading_history WHERE comic_id IN (");
+        {
+            let mut ids = history_query.separated(", ");
+            for comic_id in comic_ids {
+                ids.push_bind(comic_id);
+            }
+        }
+        history_query
+            .push(")")
+            .build()
+            .execute(&mut *transaction)
+            .await?;
+        transaction.commit().await?;
         Ok(())
     }
 
     pub async fn clear(&self) -> anyhow::Result<()> {
-        sqlx::query("DELETE FROM reading_history")
-            .execute(&self.db)
+        let mut transaction = self.db.begin().await?;
+        sqlx::query("DELETE FROM read_chapters")
+            .execute(&mut *transaction)
             .await?;
+        sqlx::query("DELETE FROM reading_history")
+            .execute(&mut *transaction)
+            .await?;
+        transaction.commit().await?;
         Ok(())
     }
 }
@@ -214,10 +252,30 @@ async fn persist_item(
     Ok(())
 }
 
+async fn persist_read_chapter(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    comic_id: &str,
+    chapter_id: &str,
+    read_at: i64,
+) -> anyhow::Result<()> {
+    sqlx::query(
+        "INSERT INTO read_chapters (comic_id, chapter_id, read_at) VALUES (?, ?, ?) \
+         ON CONFLICT(comic_id, chapter_id) DO UPDATE SET read_at = excluded.read_at \
+         WHERE excluded.read_at >= read_chapters.read_at",
+    )
+    .bind(comic_id)
+    .bind(chapter_id)
+    .bind(read_at)
+    .execute(&mut **transaction)
+    .await?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::{ReadingHistoryInput, ReadingHistoryService};
     use sqlx::sqlite::SqlitePoolOptions;
+    use std::collections::HashSet;
 
     #[tokio::test]
     async fn newer_progress_wins_and_items_are_ordered_by_last_read_time() {
@@ -250,7 +308,47 @@ mod tests {
             .expect("history item");
         assert_eq!(item.chapter_id, "chapter-new");
         assert_eq!(item.page_index, 3);
+        assert_eq!(
+            service
+                .read_chapter_ids("1")
+                .await
+                .expect("get read chapters")
+                .into_iter()
+                .collect::<HashSet<_>>(),
+            HashSet::from(["chapter-old".to_string(), "chapter-new".to_string()])
+        );
         assert!(service.get("3").await.expect("missing history").is_none());
+    }
+
+    #[tokio::test]
+    async fn tracks_only_exact_read_chapters_and_deduplicates_repeated_reads() {
+        let service = test_service().await;
+        service
+            .upsert("1", test_input("12", 1, 10))
+            .await
+            .expect("read chapter 12");
+        service
+            .upsert("1", test_input("15", 1, 20))
+            .await
+            .expect("read chapter 15");
+        service
+            .upsert("1", test_input("12", 2, 30))
+            .await
+            .expect("reread chapter 12");
+
+        let read_chapter_ids = service
+            .read_chapter_ids("1")
+            .await
+            .expect("get read chapters");
+        assert_eq!(read_chapter_ids, vec!["15".to_string(), "12".to_string()]);
+        assert!(!read_chapter_ids.contains(&"11".to_string()));
+
+        let chapter_count =
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM read_chapters WHERE comic_id = '1'")
+                .fetch_one(&service.db)
+                .await
+                .expect("count exact read chapters");
+        assert_eq!(chapter_count, 2);
     }
 
     #[tokio::test]
@@ -267,6 +365,13 @@ mod tests {
             .expect("remove empty history selection");
 
         assert!(service.get("1").await.expect("get history").is_some());
+        assert_eq!(
+            service
+                .read_chapter_ids("1")
+                .await
+                .expect("get read chapters"),
+            vec!["chapter-one"]
+        );
     }
 
     #[tokio::test]
@@ -299,6 +404,83 @@ mod tests {
         let (items, total) = service.list(1, 20).await.expect("list remaining history");
         assert_eq!(total, 1);
         assert_eq!(items[0].comic_id, "2");
+        assert!(service
+            .read_chapter_ids("1")
+            .await
+            .expect("get removed read chapters")
+            .is_empty());
+        assert_eq!(
+            service
+                .read_chapter_ids("2")
+                .await
+                .expect("get kept read chapters"),
+            vec!["chapter-2"]
+        );
+    }
+
+    #[tokio::test]
+    async fn clear_removes_history_and_all_read_chapters() {
+        let service = test_service().await;
+        service
+            .upsert("1", test_input("12", 1, 10))
+            .await
+            .expect("insert first history");
+        service
+            .upsert("2", test_input("20", 1, 20))
+            .await
+            .expect("insert second history");
+
+        service.clear().await.expect("clear history");
+
+        assert_eq!(service.list(1, 20).await.expect("list history").1, 0);
+        let read_chapter_count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM read_chapters")
+            .fetch_one(&service.db)
+            .await
+            .expect("count read chapters");
+        assert_eq!(read_chapter_count, 0);
+    }
+
+    #[tokio::test]
+    async fn migration_imports_only_the_explicit_chapter_from_existing_history() {
+        let db = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .expect("connect in-memory sqlite");
+        sqlx::raw_sql(include_str!("../../migrations/007_reading_history.sql"))
+            .execute(&db)
+            .await
+            .expect("create legacy reading history");
+        sqlx::query(
+            "INSERT INTO reading_history \
+             (comic_id, title, author, image, chapter_id, chapter_title, \
+              page_index, page_count, last_read_at) \
+             VALUES ('1', '', '', '', '12', '', 0, 1, 10), \
+                    ('2', '', '', '', '25', '', 0, 1, 20), \
+                    ('3', '', '', '', '', '', 0, 1, 30)",
+        )
+        .execute(&db)
+        .await
+        .expect("insert legacy history");
+
+        sqlx::raw_sql(include_str!("../../migrations/011_read_chapters.sql"))
+            .execute(&db)
+            .await
+            .expect("migrate read chapters");
+
+        let migrated = sqlx::query_as::<_, (String, String, i64)>(
+            "SELECT comic_id, chapter_id, read_at FROM read_chapters ORDER BY comic_id",
+        )
+        .fetch_all(&db)
+        .await
+        .expect("list migrated read chapters");
+        assert_eq!(
+            migrated,
+            vec![
+                ("1".to_string(), "12".to_string(), 10),
+                ("2".to_string(), "25".to_string(), 20)
+            ]
+        );
     }
 
     async fn test_service() -> ReadingHistoryService {

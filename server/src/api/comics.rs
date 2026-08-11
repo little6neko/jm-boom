@@ -30,6 +30,7 @@ pub async fn get_comic_detail(
 pub struct ComicStateResponse {
     is_favorite: bool,
     history: Option<ReadingHistoryResponse>,
+    read_chapter_ids: Vec<String>,
 }
 
 pub async fn get_comic_state(
@@ -37,15 +38,17 @@ pub async fn get_comic_state(
     Path(comic_id): Path<String>,
 ) -> Result<Json<ComicStateResponse>, HttpError> {
     validate_comic_id(&comic_id)?;
-    let (is_favorite, history) = tokio::try_join!(
+    let (is_favorite, history, read_chapter_ids) = tokio::try_join!(
         app.favorites.contains(&comic_id),
-        app.history.get(&comic_id)
+        app.history.get(&comic_id),
+        app.history.read_chapter_ids(&comic_id)
     )
     .map_err(state_error)?;
 
     Ok(Json(ComicStateResponse {
         is_favorite,
         history: history.map(ReadingHistoryResponse::from),
+        read_chapter_ids,
     }))
 }
 
@@ -141,4 +144,21 @@ fn validate_comic_id(comic_id: &str) -> Result<(), HttpError> {
 fn state_error(error: anyhow::Error) -> HttpError {
     tracing::error!(%error, "漫画状态查询失败");
     HttpError::internal("漫画状态查询失败")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ComicStateResponse;
+
+    #[test]
+    fn comic_state_serializes_exact_read_chapter_ids() {
+        let payload = serde_json::to_value(ComicStateResponse {
+            is_favorite: false,
+            history: None,
+            read_chapter_ids: vec!["12".to_string(), "15".to_string()],
+        })
+        .expect("serialize comic state");
+
+        assert_eq!(payload["readChapterIds"], serde_json::json!(["12", "15"]));
+    }
 }

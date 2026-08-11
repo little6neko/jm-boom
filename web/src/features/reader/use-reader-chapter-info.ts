@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 
-import { getComicDetail } from '@/lib/api/comic'
+import { getComicDetail, getComicState } from '@/lib/api/comic'
 import { SINGLE_CHAPTER_TITLE } from '@/lib/comic'
 import { CACHE } from '@/lib/constants'
 import { queryKeys } from '@/lib/query-keys'
@@ -26,6 +26,15 @@ export function useReaderChapterInfo({
     refetchOnMount: false,
     refetchOnWindowFocus: false
   })
+  const comicState = useQuery({
+    queryKey: queryKeys.comicState(albumId),
+    queryFn: () => getComicState(albumId),
+    enabled: albumId.length > 0,
+    staleTime: 10_000,
+    retry: false,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
+  })
   const chapters = albumDetail.data?.comic.chapters
   const chapterInfo = useMemo(
     () =>
@@ -49,6 +58,7 @@ export function useReaderChapterInfo({
     coverUrl,
     chapter: chapterTitle,
     chapters: chapterInfo.chapters,
+    readChapterIds: comicState.data?.readChapterIds ?? [],
     previousChapter: chapterInfo.previousChapter,
     nextChapter: chapterInfo.nextChapter
   }

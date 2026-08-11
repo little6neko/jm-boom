@@ -39,11 +39,20 @@ export function ReaderPage({ comicId, search }: { comicId: string; search: Reade
     hide: hideToolbar
   } = useReaderToolbarVisibility(false)
   const initialPageIndex = search.page ? search.page - 1 : 0
-  const { albumId, title, author, coverUrl, chapter, chapters, previousChapter, nextChapter } =
-    useReaderChapterInfo({
-      comicId,
-      search
-    })
+  const {
+    albumId,
+    title,
+    author,
+    coverUrl,
+    chapter,
+    chapters,
+    readChapterIds,
+    previousChapter,
+    nextChapter
+  } = useReaderChapterInfo({
+    comicId,
+    search
+  })
   const {
     currentIndex,
     pageCount,
@@ -262,6 +271,7 @@ export function ReaderPage({ comicId, search }: { comicId: string; search: Reade
         previousChapter={previousChapter}
         nextChapter={availableNextChapter}
         chapters={chapters}
+        readChapterIds={readChapterIds}
         albumId={albumId}
         currentIndex={currentIndex}
         pageCount={pageCount}

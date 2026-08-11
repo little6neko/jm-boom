@@ -17,6 +17,7 @@ export function ReaderChapterControls({
   albumId,
   currentReadId,
   chapters,
+  readChapterIds,
   previousChapter,
   nextChapter,
   currentIndex,
@@ -27,6 +28,7 @@ export function ReaderChapterControls({
   albumId: string
   currentReadId: string
   chapters: ReaderChapterItem[]
+  readChapterIds: string[]
   previousChapter: ReaderChapterItem | null
   nextChapter: ReaderChapterItem | null
   currentIndex: number
@@ -91,6 +93,7 @@ export function ReaderChapterControls({
         albumId={albumId}
         currentReadId={currentReadId}
         chapters={chapters}
+        readChapterIds={readChapterIds}
       />
     </>
   )

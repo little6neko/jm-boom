@@ -9,6 +9,11 @@ export type ComicDetailResult = {
 export type ComicStateResult = {
   isFavorite: boolean
   history: ReadingHistoryItem | null
+  readChapterIds: string[]
+}
+
+type ComicStateResponse = Omit<ComicStateResult, 'readChapterIds'> & {
+  readChapterIds?: string[]
 }
 
 type ComicDetailResponse = {
@@ -79,8 +84,13 @@ export async function getComicDetail(comicId: string): Promise<ComicDetailResult
   }
 }
 
-export function getComicState(comicId: string): Promise<ComicStateResult> {
-  return apiClient.get(`/api/comics/${comicId}/state`)
+export async function getComicState(comicId: string): Promise<ComicStateResult> {
+  const response = await apiClient.get<ComicStateResponse>(`/api/comics/${comicId}/state`)
+
+  return {
+    ...response,
+    readChapterIds: response.readChapterIds ?? []
+  }
 }
 
 export async function getComicComments({

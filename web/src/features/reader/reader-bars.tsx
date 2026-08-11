@@ -78,6 +78,7 @@ export function ReaderBottomBar({
   previousChapter,
   nextChapter,
   chapters,
+  readChapterIds,
   albumId,
   currentIndex,
   pageCount,
@@ -91,6 +92,7 @@ export function ReaderBottomBar({
   previousChapter: ReaderChapterItem | null
   nextChapter: ReaderChapterItem | null
   chapters: ReaderChapterItem[]
+  readChapterIds: string[]
   albumId: string
   currentIndex: number
   pageCount: number
@@ -136,6 +138,7 @@ export function ReaderBottomBar({
         albumId={albumId}
         currentReadId={currentReadId}
         chapters={chapters}
+        readChapterIds={readChapterIds}
         previousChapter={previousChapter}
         nextChapter={nextChapter}
         currentIndex={currentIndex}

@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { ArrowDownNarrowWideIcon, ArrowUpNarrowWideIcon } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,8 @@ import type { ComicChapter } from '@/domain/comic'
 import {
   SINGLE_CHAPTER_TITLE,
   getComicChapterPresentation,
-  getComicDisplayChapterCount
+  getComicDisplayChapterCount,
+  getReadChapterToneClassName
 } from '@/lib/comic'
 import { UI } from '@/lib/constants'
 import { cn } from '@/lib/utils'
@@ -27,12 +28,14 @@ export function ChaptersSection({
   albumId,
   comicId,
   sortedChapters,
+  readChapterIds,
   descending,
   onToggleSort
 }: {
   albumId: string
   comicId: string
   sortedChapters: ComicChapter[]
+  readChapterIds: string[]
   descending: boolean
   onToggleSort: () => void
 }) {
@@ -45,6 +48,7 @@ export function ChaptersSection({
     safePage * UI.CHAPTER_PAGE_SIZE
   )
   const numberingChapters = descending ? sortedChapters : [...sortedChapters].reverse()
+  const readChapterIdSet = useMemo(() => new Set(readChapterIds), [readChapterIds])
 
   useEffect(() => {
     setPage(current => Math.min(current, pageCount))
@@ -86,13 +90,25 @@ export function ChaptersSection({
           }}
           className="block"
         >
-          <Card size="sm" className="py-0 transition-colors hover:bg-muted/40">
+          <Card
+            size="sm"
+            className={cn(
+              'py-0 transition-colors hover:bg-muted/40',
+              getReadChapterToneClassName({ isRead: readChapterIdSet.has(comicId) }),
+              readChapterIdSet.has(comicId) && 'ring-muted-foreground/30'
+            )}
+          >
             <CardContent className="flex items-center justify-between gap-4 p-4">
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium">{SINGLE_CHAPTER_TITLE}</div>
                 <div className="text-xs text-muted-foreground">单行本</div>
               </div>
-              <Badge variant="outline">JM {comicId}</Badge>
+              <Badge
+                variant="outline"
+                className={cn(readChapterIdSet.has(comicId) && 'text-muted-foreground')}
+              >
+                JM {comicId}
+              </Badge>
             </CardContent>
           </Card>
         </Link>
@@ -101,6 +117,7 @@ export function ChaptersSection({
           <div className="space-y-2">
             {visibleChapters.map(chapter => {
               const presentation = getComicChapterPresentation(chapter, numberingChapters)
+              const isRead = readChapterIdSet.has(chapter.id)
 
               return (
                 <Link
@@ -112,7 +129,14 @@ export function ChaptersSection({
                   }}
                   className="block"
                 >
-                  <Card size="sm" className="py-0 transition-colors hover:bg-muted/40">
+                  <Card
+                    size="sm"
+                    className={cn(
+                      'py-0 transition-colors hover:bg-muted/40',
+                      getReadChapterToneClassName({ isRead }),
+                      isRead && 'ring-muted-foreground/30'
+                    )}
+                  >
                     <CardContent className="flex items-center justify-between gap-4 p-4">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium">{presentation.title}</div>
@@ -122,7 +146,9 @@ export function ChaptersSection({
                           </div>
                         ) : null}
                       </div>
-                      <Badge variant="outline">JM {chapter.id}</Badge>
+                      <Badge variant="outline" className={cn(isRead && 'text-muted-foreground')}>
+                        JM {chapter.id}
+                      </Badge>
                     </CardContent>
                   </Card>
                 </Link>

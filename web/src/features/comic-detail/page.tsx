@@ -114,6 +114,7 @@ function ComicDetailView({
         albumId={albumId}
         comicId={comic.id}
         sortedChapters={sortedChapters}
+        readChapterIds={state?.readChapterIds ?? []}
         descending={chaptersDescending}
         onToggleSort={() => setChaptersDescending(current => !current)}
       />

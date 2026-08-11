@@ -48,7 +48,7 @@ function BookshelfPage() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.readingHistory() })
       for (const comicId of comicIds) {
         queryClient.setQueryData<ComicStateResult>(queryKeys.comicState(comicId), current =>
-          current ? { ...current, history: null } : current
+          current ? { ...current, history: null, readChapterIds: [] } : current
         )
       }
       selection.toggleSelectionMode(false)
@@ -63,9 +63,8 @@ function BookshelfPage() {
         { queryKey: queryKeys.readingHistory() },
         { items: [], total: 0 }
       )
-      queryClient.setQueriesData<ComicStateResult>(
-        { queryKey: ['jm-comic-state'] },
-        current => (current ? { ...current, history: null } : current)
+      queryClient.setQueriesData<ComicStateResult>({ queryKey: ['jm-comic-state'] }, current =>
+        current ? { ...current, history: null, readChapterIds: [] } : current
       )
       toast.success('历史观看记录已清除')
     },

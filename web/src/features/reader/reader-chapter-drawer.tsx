@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { SideDrawerContent } from '@/components/side-drawer-content'
 import { Badge } from '@/components/ui/badge'
 import { Drawer, DrawerDescription, DrawerHeader, DrawerTitle } from '@/components/ui/drawer'
+import { getReadChapterToneClassName } from '@/lib/comic'
 import { cn } from '@/lib/utils'
 import { listDownloadedChapters } from '@/lib/api/download'
 import { queryKeys } from '@/lib/query-keys'
@@ -17,7 +18,8 @@ export function ReaderChapterDrawer({
   title,
   albumId,
   currentReadId,
-  chapters
+  chapters,
+  readChapterIds
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -25,6 +27,7 @@ export function ReaderChapterDrawer({
   albumId: string
   currentReadId: string
   chapters: ReaderChapterItem[]
+  readChapterIds: string[]
 }) {
   const listRef = useRef<HTMLDivElement | null>(null)
   const displayChapters = useMemo(() => [...chapters].reverse(), [chapters])
@@ -41,6 +44,7 @@ export function ReaderChapterDrawer({
     () => new Set(downloadedChapters.data?.chapterIds ?? []),
     [downloadedChapters.data?.chapterIds]
   )
+  const readChapterIdSet = useMemo(() => new Set(readChapterIds), [readChapterIds])
 
   useEffect(() => {
     if (!open) {
@@ -70,6 +74,7 @@ export function ReaderChapterDrawer({
             {displayChapters.map(chapter => {
               const isCurrent = chapter.id === currentReadId
               const isDownloaded = downloadedChapterIds.has(chapter.id)
+              const isRead = readChapterIdSet.has(chapter.id)
 
               return (
                 <Link
@@ -83,6 +88,8 @@ export function ReaderChapterDrawer({
                   data-current-chapter={isCurrent ? 'true' : undefined}
                   className={cn(
                     'flex items-center justify-between gap-3 rounded-md border border-border bg-card/60 px-3 py-2.5 text-sm text-card-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
+                    getReadChapterToneClassName({ isRead, isCurrent }),
+                    isRead && !isCurrent && 'border-muted-foreground/30',
                     isCurrent && 'border-primary/40 bg-accent text-accent-foreground'
                   )}
                   onClick={() => onOpenChange(false)}

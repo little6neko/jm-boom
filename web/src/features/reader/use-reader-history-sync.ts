@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { HISTORY, READER } from '@/lib/constants'
 import type { ComicStateResult } from '@/lib/api/comic'
 import { upsertReadingHistory, type ReadingHistoryItem } from '@/lib/api/history'
+import { mergeReadChapterIds } from '@/lib/comic'
 import { queryKeys } from '@/lib/query-keys'
 
 interface UseReaderHistorySyncProps {
@@ -30,6 +31,7 @@ export function useReaderHistorySync({
   const queryClient = useQueryClient()
   const pendingHistoryRef = useRef<Omit<ReadingHistoryItem, 'lastReadAt'> | null>(null)
   const lastPersistedAtRef = useRef(0)
+  const stateComicId = albumId || comicId
   const historyItem = useMemo(
     () =>
       comicId && pageCount > 0
@@ -60,20 +62,52 @@ export function useReaderHistorySync({
       lastPersistedAtRef.current = lastReadAt
       const nextItem = { ...pendingHistory, lastReadAt }
       void queryClient.invalidateQueries({ queryKey: queryKeys.readingHistory() })
-      queryClient.setQueryData<ComicStateResult>(queryKeys.comicState(nextItem.id), current =>
-        current ? { ...current, history: nextItem } : current
-      )
-      void upsertReadingHistory(nextItem, keepalive)
-        .catch(error => {
-          if (import.meta.env.DEV) {
-            console.debug('Reading history sync failed', error)
-          }
-        })
+      queryClient.setQueryData<ComicStateResult>(queryKeys.comicState(nextItem.id), current => ({
+        isFavorite: current?.isFavorite ?? false,
+        history: nextItem,
+        readChapterIds: mergeReadChapterIds(current?.readChapterIds ?? [], nextItem.chapterId)
+      }))
+      void upsertReadingHistory(nextItem, keepalive).catch(error => {
+        if (import.meta.env.DEV) {
+          console.debug('Reading history sync failed', error)
+        }
+      })
     },
     [queryClient]
   )
 
   useEffect(() => {
+    if (!comicId || !stateComicId || pageCount <= 0) {
+      return
+    }
+
+    queryClient.setQueryData<ComicStateResult>(queryKeys.comicState(stateComicId), current => {
+      const readChapterIds = mergeReadChapterIds(current?.readChapterIds ?? [], comicId)
+
+      if (current && readChapterIds === current.readChapterIds) {
+        return current
+      }
+
+      return {
+        isFavorite: current?.isFavorite ?? false,
+        history: current?.history ?? null,
+        readChapterIds
+      }
+    })
+  }, [comicId, pageCount, queryClient, stateComicId])
+
+  useEffect(() => {
+    const pendingHistory = pendingHistoryRef.current
+
+    if (
+      pendingHistory &&
+      (!historyItem ||
+        pendingHistory.id !== historyItem.id ||
+        pendingHistory.chapterId !== historyItem.chapterId)
+    ) {
+      flushPendingHistory()
+    }
+
     pendingHistoryRef.current = historyItem
 
     if (!historyItem) {

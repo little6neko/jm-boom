@@ -40,7 +40,8 @@ export function useComicFavorite({
     onSuccess: result => {
       queryClient.setQueryData<ComicStateResult>(queryKeys.comicState(comic.id), current => ({
         isFavorite: result.isFavorite,
-        history: current?.history ?? null
+        history: current?.history ?? null,
+        readChapterIds: current?.readChapterIds ?? []
       }))
       void queryClient.invalidateQueries({ queryKey: queryKeys.favorites() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.favoriteSync() })

@@ -46,6 +46,26 @@ export function getComicDisplayChapterCount(chapters: ComicChapter[]) {
   return Math.max(chapters.length, 1)
 }
 
+export function mergeReadChapterIds(readChapterIds: string[], chapterId: string) {
+  if (!chapterId || readChapterIds.includes(chapterId)) {
+    return readChapterIds
+  }
+
+  return [...readChapterIds, chapterId]
+}
+
+export function getReadChapterToneClassName({
+  isRead,
+  isCurrent = false
+}: {
+  isRead: boolean
+  isCurrent?: boolean
+}) {
+  return isRead && !isCurrent
+    ? 'bg-muted text-muted-foreground hover:bg-muted/70 hover:text-foreground'
+    : undefined
+}
+
 function getFallbackEpisodeNumber(chapter: ComicChapter, chapters: ComicChapter[]) {
   const descendingChapters = sortComicChapters(chapters)
   const descendingIndex = descendingChapters.findIndex(candidate => candidate.id === chapter.id)
