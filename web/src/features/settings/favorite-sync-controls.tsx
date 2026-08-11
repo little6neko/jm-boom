@@ -93,8 +93,7 @@ function FavoriteSyncDetails({
       {state.status === 'needsResolution' ? (
         <div className="space-y-3">
           <p className="text-xs leading-5 text-muted-foreground">
-            本地共 {state.localCount} 项，远端共 {state.remoteCount} 项；仅本地{' '}
-            {state.localOnlyCount} 项，仅远端 {state.remoteOnlyCount} 项。
+            {favoriteSyncDifferenceSummary(state)}
           </p>
           <div className="flex flex-wrap justify-end gap-2">
             <Button
@@ -176,6 +175,10 @@ export function favoriteSyncDescription(
   if (state?.enabled) return '开启后，在本服务中收藏或取消收藏都会同步到远端账号'
   if (!accountLoggedIn) return '登录 JM 账号后可开启；默认不会访问远端收藏'
   return '开启时先检查两端差异，完成后保持单项收藏同步'
+}
+
+export function favoriteSyncDifferenceSummary(state: FavoriteSyncState) {
+  return `本地收藏 ${state.localCount} 项，远端收藏 ${state.remoteCount} 项；其中 ${state.localOnlyCount} 项只存在于本地，${state.remoteOnlyCount} 项只存在于远端。`
 }
 
 export function favoriteSyncProgress(state: FavoriteSyncState) {
