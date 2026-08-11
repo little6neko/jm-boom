@@ -11,11 +11,11 @@ use chrono::Local;
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use std::sync::Arc;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::{watch, Mutex, RwLock};
 
 const CREDENTIAL_CRYPTO_SEED: &str = "jm-boom-local-auto-login";
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum LoginStatus {
     LoggedOut,
@@ -29,6 +29,13 @@ pub enum SignInStatus {
     Pending,
     SigningIn,
     SignedIn,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct AccountSession {
+    pub user_id: Option<u32>,
+    pub username: Option<String>,
+    pub login_status: LoginStatus,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -75,6 +82,7 @@ pub struct AccountService {
     credentials: RwLock<Option<SavedCredentials>>,
     user_id: RwLock<Option<u32>>,
     state: RwLock<AccountState>,
+    session_tx: watch::Sender<AccountSession>,
     operation: Mutex<()>,
 }
 
@@ -106,6 +114,12 @@ impl AccountService {
                 sign_in_status: SignInStatus::Pending,
             });
 
+        let (session_tx, _) = watch::channel(AccountSession {
+            user_id: None,
+            username: state.username.clone(),
+            login_status: state.login_status,
+        });
+
         Ok(Self {
             db,
             jm,
@@ -113,12 +127,17 @@ impl AccountService {
             credentials: RwLock::new(saved),
             user_id: RwLock::new(None),
             state: RwLock::new(state),
+            session_tx,
             operation: Mutex::new(()),
         })
     }
 
     pub async fn state(&self) -> AccountState {
         self.state.read().await.clone()
+    }
+
+    pub(crate) fn subscribe_session(&self) -> watch::Receiver<AccountSession> {
+        self.session_tx.subscribe()
     }
 
     pub fn start_auto_login(self: &Arc<Self>) {
@@ -174,11 +193,13 @@ impl AccountService {
         *self.credentials.write().await = None;
         *self.user_id.write().await = None;
         *self.state.write().await = AccountState::empty();
+        self.publish_session().await;
         Ok(self.state().await)
     }
 
     async fn login(self: &Arc<Self>, saved: SavedCredentials) -> JmResult<()> {
         let _operation = self.operation.lock().await;
+        *self.user_id.write().await = None;
         self.set_login_state(LoginStatus::LoggingIn).await;
 
         let login = match self.login_remote(&saved.username, &saved.password).await {
@@ -211,6 +232,7 @@ impl AccountService {
                 SignInStatus::Pending
             };
         }
+        self.publish_session().await;
 
         let service = self.clone();
         tokio::spawn(async move {
@@ -337,10 +359,22 @@ impl AccountService {
 
     async fn set_login_state(&self, status: LoginStatus) {
         self.state.write().await.login_status = status;
+        self.publish_session().await;
     }
 
     async fn set_sign_in_status(&self, status: SignInStatus) {
         self.state.write().await.sign_in_status = status;
+    }
+
+    async fn publish_session(&self) {
+        let state = self.state.read().await;
+        let session = AccountSession {
+            user_id: *self.user_id.read().await,
+            username: state.username.clone(),
+            login_status: state.login_status,
+        };
+        drop(state);
+        self.session_tx.send_replace(session);
     }
 }
 

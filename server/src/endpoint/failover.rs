@@ -84,6 +84,44 @@ where
     Err(last_error.unwrap_or(JmError::Empty))
 }
 
+/// Runs a mutation against exactly one endpoint.
+///
+/// Toggle-style upstream APIs must not be retried against another endpoint: the
+/// first request may have succeeded even when its response was lost.
+pub async fn request_once<T, F>(
+    jm: &JmClient,
+    endpoints: &EndpointManager,
+    operation: F,
+) -> JmResult<(String, T)>
+where
+    F: for<'a> Fn(&'a JmClient, &'a str) -> Pin<Box<dyn Future<Output = JmResult<T>> + Send + 'a>>,
+{
+    let endpoint = endpoints
+        .request_candidates()
+        .await
+        .into_iter()
+        .next()
+        .ok_or(JmError::Empty)?;
+    let started = Instant::now();
+
+    match operation(jm, &endpoint).await {
+        Ok(value) => {
+            endpoints
+                .report_success(&endpoint, started.elapsed().as_millis() as u64)
+                .await;
+            Ok((endpoint, value))
+        }
+        Err(error) => {
+            if error.is_retryable() {
+                endpoints
+                    .report_failure(&endpoint, &error.to_string())
+                    .await;
+            }
+            Err(error)
+        }
+    }
+}
+
 fn push_unique(values: &mut Vec<String>, value: &str) {
     if !values.iter().any(|current| current == value) {
         values.push(value.to_string());

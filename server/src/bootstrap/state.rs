@@ -1,7 +1,8 @@
 use crate::{
     application::{
         AccessGateService, AccountService, ComicService, CoverService, DownloadService,
-        FavoriteService, ReaderService, ReadingHistoryService, SettingsService,
+        FavoriteService, FavoriteSyncService, JmFavoriteRemote, ReaderService,
+        ReadingHistoryService, SettingsService,
     },
     bootstrap::config::AppConfig,
     cache, endpoint, image_work, jm, page_materializer,
@@ -17,6 +18,7 @@ pub(crate) struct AppState {
     pub(crate) reader: Arc<ReaderService>,
     pub(crate) downloads: Arc<DownloadService>,
     pub(crate) favorites: Arc<FavoriteService>,
+    pub(crate) favorite_sync: Arc<FavoriteSyncService>,
     pub(crate) history: Arc<ReadingHistoryService>,
     pub(crate) settings: Arc<SettingsService>,
 }
@@ -52,6 +54,16 @@ impl AppState {
             image_work::ImageWorkBudget::new(),
         ));
         let favorites = Arc::new(FavoriteService::new(db.clone()));
+        let favorite_remote = Arc::new(JmFavoriteRemote::new(jm.clone(), endpoints.clone()));
+        let favorite_sync = Arc::new(
+            FavoriteSyncService::new(
+                db.clone(),
+                favorites.clone(),
+                favorite_remote,
+                account.subscribe_session(),
+            )
+            .await?,
+        );
         let history = Arc::new(ReadingHistoryService::new(db.clone()));
         let downloads = Arc::new(
             DownloadService::new(db, jm.clone(), endpoints.clone(), page_materializer.clone())
@@ -72,6 +84,7 @@ impl AppState {
         let access_gate = Arc::new(AccessGateService::from_env());
 
         endpoints.start_maintenance();
+        favorite_sync.start_account_monitor();
         account.start_auto_login();
         let download_service = downloads.clone();
         tokio::spawn(async move {
@@ -86,6 +99,7 @@ impl AppState {
             reader,
             downloads,
             favorites,
+            favorite_sync,
             history,
             settings,
         })

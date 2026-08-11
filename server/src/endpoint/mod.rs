@@ -6,7 +6,7 @@ mod repository;
 #[cfg(test)]
 mod tests;
 
-pub use failover::request_with_failover;
+pub use failover::{request_once, request_with_failover};
 
 use discovery::normalize_endpoint;
 use repository::EndpointRepository;

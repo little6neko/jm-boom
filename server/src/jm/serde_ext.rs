@@ -68,6 +68,24 @@ where
         .unwrap_or_default())
 }
 
+pub(crate) fn bool_from_any<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+    Ok(match value {
+        serde_json::Value::Bool(value) => value,
+        serde_json::Value::Number(value) => value.as_i64().unwrap_or_default() != 0,
+        serde_json::Value::String(value) => {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes"
+            )
+        }
+        _ => false,
+    })
+}
+
 fn scalar_string(value: serde_json::Value) -> Option<String> {
     match value {
         serde_json::Value::String(value) => Some(value),

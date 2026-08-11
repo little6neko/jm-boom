@@ -23,6 +23,7 @@ mod comic_summary;
 mod comics;
 mod covers;
 mod downloads;
+mod favorite_sync;
 mod favorites;
 mod history;
 mod home;
@@ -81,4 +82,14 @@ pub fn routes() -> Router<AppState> {
                 .put(settings::update_account)
                 .delete(settings::clear_account),
         )
+        .route(
+            "/settings/favorite-sync",
+            get(favorite_sync::get).put(favorite_sync::set),
+        )
+        .route("/settings/favorite-sync/check", post(favorite_sync::check))
+        .route(
+            "/settings/favorite-sync/resolve",
+            post(favorite_sync::resolve),
+        )
+        .route("/settings/favorite-sync/retry", post(favorite_sync::retry))
 }

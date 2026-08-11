@@ -1,6 +1,6 @@
 use super::{
-    discovery::normalize_endpoint, request_with_failover, select_current_endpoint, EndpointInner,
-    EndpointManager, EndpointMode, EndpointProbe, FALLBACK_ENDPOINTS,
+    discovery::normalize_endpoint, request_once, request_with_failover, select_current_endpoint,
+    EndpointInner, EndpointManager, EndpointMode, EndpointProbe, FALLBACK_ENDPOINTS,
 };
 use crate::jm::{JmClient, JmError, JmResult};
 use sqlx::sqlite::SqlitePoolOptions;
@@ -135,6 +135,41 @@ async fn failover_retries_the_next_available_candidate() {
             "https://first.example".to_string(),
             "https://second.example".to_string()
         ]
+    );
+}
+
+#[tokio::test]
+async fn single_endpoint_request_never_retries_a_mutation() {
+    let manager = test_manager().await;
+    {
+        let mut inner = manager.inner.write().await;
+        inner.probe_completed = true;
+        inner.current_endpoint = "https://first.example".to_string();
+        inner.endpoints = vec![
+            available("https://first.example", 1),
+            available("https://second.example", 2),
+        ];
+    }
+    let jm = JmClient::new().expect("create JM client");
+    let attempts = Arc::new(std::sync::Mutex::new(Vec::new()));
+
+    let error = request_once(&jm, &manager, {
+        let attempts = attempts.clone();
+        move |_jm, endpoint| {
+            attempts
+                .lock()
+                .expect("attempt log poisoned")
+                .push(endpoint.to_string());
+            Box::pin(async { Err::<(), _>(JmError::Network("ambiguous failure".into())) })
+        }
+    })
+    .await
+    .expect_err("single endpoint mutation must return the first failure");
+
+    assert!(matches!(error, JmError::Network(_)));
+    assert_eq!(
+        *attempts.lock().expect("attempt log poisoned"),
+        vec!["https://first.example".to_string()]
     );
 }
 

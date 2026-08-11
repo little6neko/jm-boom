@@ -1,11 +1,23 @@
-use super::{media::cover_url, CollectionListQuery, COLLECTION_PAGE_SIZE};
-use crate::{application::FavoriteInput, http_error::HttpError, AppState};
+use super::{media::cover_url, COLLECTION_PAGE_SIZE};
+use crate::{application::FavoriteInput, http_error::HttpError, jm::FavoriteOrder, AppState};
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     Json,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct FavoriteListQuery {
+    #[serde(default = "default_page")]
+    page: u32,
+    #[serde(default)]
+    order: FavoriteOrder,
+}
+
+fn default_page() -> u32 {
+    1
+}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -28,10 +40,10 @@ pub(crate) struct FavoriteResponse {
 
 pub async fn list(
     State(app): State<AppState>,
-    Query(query): Query<CollectionListQuery>,
+    Query(query): Query<FavoriteListQuery>,
 ) -> Result<Json<FavoriteListResponse>, HttpError> {
     validate_page(query.page)?;
-    favorite_list(&app, query.page).await.map(Json)
+    favorite_list(&app, query.page, query.order).await.map(Json)
 }
 
 pub async fn upsert(
@@ -40,12 +52,12 @@ pub async fn upsert(
     Json(input): Json<FavoriteInput>,
 ) -> Result<Json<FavoriteResponse>, HttpError> {
     validate_comic_id(&comic_id)?;
-    app.favorites
+    app.favorite_sync
         .upsert(&comic_id, input)
         .await
         .map(FavoriteResponse::from)
         .map(Json)
-        .map_err(internal_error)
+        .map_err(|error| error.into_http_error())
 }
 
 pub async fn remove(
@@ -53,24 +65,31 @@ pub async fn remove(
     Path(comic_id): Path<String>,
 ) -> Result<StatusCode, HttpError> {
     validate_comic_id(&comic_id)?;
-    app.favorites
+    app.favorite_sync
         .remove(&comic_id)
         .await
-        .map_err(internal_error)?;
+        .map_err(|error| error.into_http_error())?;
     Ok(StatusCode::NO_CONTENT)
 }
 
 pub async fn clear(State(app): State<AppState>) -> Result<StatusCode, HttpError> {
-    app.favorites.clear().await.map_err(internal_error)?;
+    app.favorite_sync
+        .clear()
+        .await
+        .map_err(|error| error.into_http_error())?;
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn favorite_list(app: &AppState, page: u32) -> Result<FavoriteListResponse, HttpError> {
+async fn favorite_list(
+    app: &AppState,
+    page: u32,
+    order: FavoriteOrder,
+) -> Result<FavoriteListResponse, HttpError> {
     let (items, total) = app
-        .favorites
-        .list(page, COLLECTION_PAGE_SIZE)
+        .favorite_sync
+        .list(page, COLLECTION_PAGE_SIZE, order)
         .await
-        .map_err(internal_error)?;
+        .map_err(|error| error.into_http_error())?;
     let items = items.into_iter().map(FavoriteResponse::from).collect();
     Ok(FavoriteListResponse { items, total })
 }
@@ -111,7 +130,48 @@ fn validate_page(page: u32) -> Result<(), HttpError> {
     Ok(())
 }
 
-fn internal_error(error: anyhow::Error) -> HttpError {
-    tracing::error!(%error, "收藏存储操作失败");
-    HttpError::internal("收藏存储操作失败")
+#[cfg(test)]
+mod tests {
+    use super::{FavoriteListQuery, FavoriteResponse};
+    use crate::{application::FavoriteItem, jm::FavoriteOrder};
+
+    #[test]
+    fn favorite_order_defaults_to_mr_and_rejects_unknown_values() {
+        let default: FavoriteListQuery =
+            serde_json::from_value(serde_json::json!({})).expect("deserialize default query");
+        assert_eq!(default.page, 1);
+        assert_eq!(default.order, FavoriteOrder::Mr);
+
+        let mp: FavoriteListQuery = serde_json::from_value(serde_json::json!({
+            "page": 2,
+            "order": "mp"
+        }))
+        .expect("deserialize mp query");
+        assert_eq!(mp.page, 2);
+        assert_eq!(mp.order, FavoriteOrder::Mp);
+
+        assert!(
+            serde_json::from_value::<FavoriteListQuery>(serde_json::json!({
+                "order": "unknown"
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn serializes_favorite_without_update_time() {
+        let item = FavoriteItem {
+            comic_id: "123".into(),
+            title: "Example".into(),
+            author: "Author".into(),
+            description: String::new(),
+            image: String::new(),
+            tags: Vec::new(),
+            favorited_at: 456,
+        };
+        let response = FavoriteResponse::from(item);
+
+        let value = serde_json::to_value(response).expect("serialize favorite response");
+        assert!(value.get("updatedAt").is_none());
+    }
 }

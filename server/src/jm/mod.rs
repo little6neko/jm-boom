@@ -10,6 +10,7 @@ mod signature;
 pub use client::JmClient;
 pub(crate) use crypto::decrypt_aes256_ecb;
 pub use error::{JmError, JmResult};
+pub(crate) use models::{FavoriteComic, FavoriteOrder, FavoritePage};
 pub(crate) use setting::invalidate_img_host;
 pub(crate) use signature::SettingRequestSignature;
 

@@ -2,7 +2,8 @@ use super::{
     crypto,
     error::JmError,
     models::{
-        Comic, ComicDetailPayload, HomeSection, HomeSectionPayload, SearchPayload, SearchResult,
+        Comic, ComicDetailPayload, ComicFavoriteStatePayload, FavoriteComic, FavoriteListPayload,
+        FavoriteOrder, FavoritePage, HomeSection, HomeSectionPayload, SearchPayload, SearchResult,
     },
     signature::JmRequestSignature,
     JmResult,
@@ -155,6 +156,44 @@ impl JmClient {
                 })
                 .collect(),
         })
+    }
+
+    pub async fn get_favorite_page(
+        &self,
+        endpoint: &str,
+        page: u32,
+        order: FavoriteOrder,
+    ) -> JmResult<FavoritePage> {
+        let payload: FavoriteListPayload = self
+            .get(
+                endpoint,
+                "favorite",
+                &[
+                    ("page", page.to_string()),
+                    ("folder_id", String::new()),
+                    ("o", order.as_str().to_string()),
+                ],
+            )
+            .await?;
+
+        Ok(FavoritePage {
+            total: payload.total,
+            items: payload.list.into_iter().map(FavoriteComic::from).collect(),
+        })
+    }
+
+    pub async fn is_comic_favorite(&self, endpoint: &str, comic_id: &str) -> JmResult<bool> {
+        let payload: ComicFavoriteStatePayload = self
+            .get(endpoint, "album", &[("id", comic_id.to_string())])
+            .await?;
+        Ok(payload.is_favorite)
+    }
+
+    pub async fn toggle_comic_favorite(&self, endpoint: &str, comic_id: &str) -> JmResult<()> {
+        let fields = vec![("aid".to_string(), comic_id.to_string())];
+        self.post_form::<serde_json::Value>(endpoint, "favorite", &fields, true)
+            .await
+            .map(|_| ())
     }
 
     /// Get home feed sections
