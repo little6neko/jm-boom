@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils'
 type FilterSelectOption = {
   label: string
   value: string
+  disabled?: boolean
+  description?: string
 }
 
 type FilterSelectProps = {
@@ -42,8 +44,20 @@ export function FilterSelect({
         <SelectContent position="popper" align="end">
           <SelectGroup>
             {options.map(option => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
+              <SelectItem
+                key={option.value}
+                value={option.value}
+                disabled={option.disabled}
+                textValue={option.label}
+              >
+                {option.description ? (
+                  <span className="flex flex-col items-start gap-0.5">
+                    <span>{option.label}</span>
+                    <span className="text-xs text-muted-foreground">{option.description}</span>
+                  </span>
+                ) : (
+                  option.label
+                )}
               </SelectItem>
             ))}
           </SelectGroup>

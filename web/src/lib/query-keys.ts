@@ -1,14 +1,15 @@
 export const queryKeys = {
   apiEndpointDiscovery: () => ['jm-api-endpoint-discovery'] as const,
   settingsAccount: () => ['jm-settings-account'] as const,
+  favoriteSync: () => ['jm-favorite-sync'] as const,
   settingsSystem: () => ['jm-settings-system'] as const,
   comicComments: (comicId: string) => ['jm-comic-comments', comicId] as const,
   comicDetail: (comicId: string) => ['jm-comic-detail', comicId] as const,
   comicState: (comicId: string) => ['jm-comic-state', comicId] as const,
   downloadTasks: () => ['jm-download-tasks'] as const,
   downloadedChapters: () => ['jm-downloaded-chapters'] as const,
-  favorites: (page?: number) =>
-    page === undefined ? (['jm-favorites'] as const) : (['jm-favorites', page] as const),
+  favorites: (page?: number, order: string = 'mr') =>
+    page === undefined ? (['jm-favorites'] as const) : (['jm-favorites', page, order] as const),
   homeFeed: () => ['jm-home-feed'] as const,
   readingHistory: (page?: number) =>
     page === undefined

@@ -12,7 +12,9 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import type { FavoriteSyncResolution, FavoriteSyncState } from '@/lib/api/favorite-sync'
 import type { AccountState } from '@/lib/api/setting'
+import { FavoriteSyncControls } from './favorite-sync-controls'
 import { SettingRow, SettingsSection } from './shared'
 
 export function AccountSection({
@@ -20,13 +22,23 @@ export function AccountSection({
   isLoading,
   isSaving,
   isClearing,
+  favoriteSync,
+  isFavoriteSyncLoading,
+  isFavoriteSyncMutating,
   onSave,
-  onClear
+  onClear,
+  onFavoriteSyncEnabledChange,
+  onFavoriteSyncCheck,
+  onFavoriteSyncResolve,
+  onFavoriteSyncRetry
 }: {
   state: AccountState | undefined
   isLoading: boolean
   isSaving: boolean
   isClearing: boolean
+  favoriteSync: FavoriteSyncState | undefined
+  isFavoriteSyncLoading: boolean
+  isFavoriteSyncMutating: boolean
   onSave: (input: {
     username: string
     password?: string
@@ -34,6 +46,10 @@ export function AccountSection({
     autoSignIn: boolean
   }) => void
   onClear: () => void
+  onFavoriteSyncEnabledChange: (enabled: boolean) => void
+  onFavoriteSyncCheck: () => void
+  onFavoriteSyncResolve: (resolution: FavoriteSyncResolution) => void
+  onFavoriteSyncRetry: () => void
 }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -104,6 +120,17 @@ export function AccountSection({
         <SettingRow title="自动签到" description="登录成功后自动完成当天签到" inline>
           <Switch checked={autoSignIn} disabled={isBusy} onCheckedChange={setAutoSignIn} />
         </SettingRow>
+
+        <FavoriteSyncControls
+          state={favoriteSync}
+          accountLoggedIn={state?.loginStatus === 'loggedIn'}
+          isLoading={isFavoriteSyncLoading}
+          isMutating={isFavoriteSyncMutating}
+          onEnabledChange={onFavoriteSyncEnabledChange}
+          onCheck={onFavoriteSyncCheck}
+          onResolve={onFavoriteSyncResolve}
+          onRetry={onFavoriteSyncRetry}
+        />
 
         <div className="flex items-center justify-end gap-2">
           <Button

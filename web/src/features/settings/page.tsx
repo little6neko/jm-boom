@@ -24,11 +24,16 @@ export function SettingsPage() {
     endpointState,
     systemInfo,
     account,
+    favoriteSync,
     refreshEndpoints,
     changeEndpoint,
     clearCache,
     saveAccount,
-    removeAccount
+    removeAccount,
+    toggleFavoriteSync,
+    checkFavorites,
+    resolveFavorites,
+    retryFavorites
   } = useSettingsData()
 
   function resetSettings() {
@@ -76,8 +81,20 @@ export function SettingsPage() {
             isLoading={account.isLoading}
             isSaving={saveAccount.isPending}
             isClearing={removeAccount.isPending}
+            favoriteSync={favoriteSync.data}
+            isFavoriteSyncLoading={favoriteSync.isLoading}
+            isFavoriteSyncMutating={
+              toggleFavoriteSync.isPending ||
+              checkFavorites.isPending ||
+              resolveFavorites.isPending ||
+              retryFavorites.isPending
+            }
             onSave={input => saveAccount.mutate(input)}
             onClear={() => removeAccount.mutate()}
+            onFavoriteSyncEnabledChange={enabled => toggleFavoriteSync.mutate(enabled)}
+            onFavoriteSyncCheck={() => checkFavorites.mutate()}
+            onFavoriteSyncResolve={resolution => resolveFavorites.mutate(resolution)}
+            onFavoriteSyncRetry={() => retryFavorites.mutate()}
           />
 
           <Separator />
