@@ -1,10 +1,12 @@
 import type { ComicChapter, ComicDetail } from '@/domain/comic'
 import type { ReadingHistoryItem } from '@/lib/api/history'
+import { getComicChapterPresentation } from '@/lib/comic'
 
 export type ComicReadingTarget = {
   readId: string
   page?: number
   isContinue: boolean
+  episodeNumber?: string
 }
 
 export function resolveComicReadingTarget(
@@ -15,11 +17,17 @@ export function resolveComicReadingTarget(
   if (history && isValidHistoryChapter(comic, history.chapterId)) {
     const maxPageIndex = Math.max(history.pageCount - 1, 0)
     const pageIndex = Math.min(normalizePageIndex(history.pageIndex), maxPageIndex)
+    const historyChapter = comic.chapters.find(chapter => chapter.id === history.chapterId)
+    const episodeNumber =
+      comic.chapters.length > 1 && historyChapter
+        ? getComicChapterPresentation(historyChapter, sortedChapters).episodeNumber
+        : undefined
 
     return {
       readId: history.chapterId,
       page: pageIndex + 1,
-      isContinue: true
+      isContinue: true,
+      episodeNumber
     }
   }
 
@@ -27,6 +35,14 @@ export function resolveComicReadingTarget(
     readId: sortedChapters[sortedChapters.length - 1]?.id ?? comic.id,
     isContinue: false
   }
+}
+
+export function getComicReadingActionLabel(readingTarget: ComicReadingTarget) {
+  if (!readingTarget.isContinue) {
+    return '开始阅读'
+  }
+
+  return readingTarget.episodeNumber ? `从第${readingTarget.episodeNumber}话继续` : '继续阅读'
 }
 
 function isValidHistoryChapter(comic: ComicDetail, chapterId: string) {

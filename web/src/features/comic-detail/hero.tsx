@@ -19,7 +19,7 @@ import type { ComicDetail } from '@/domain/comic'
 import { getComicDisplayChapterCount } from '@/lib/comic'
 import { formatNumber, formatUnixDateTime } from '@/lib/format'
 import { ComicDetailFloatingActions } from './floating-actions'
-import type { ComicReadingTarget } from './reading-target'
+import { getComicReadingActionLabel, type ComicReadingTarget } from './reading-target'
 import { ComicCover } from './shared'
 
 export function ComicHero({
@@ -102,7 +102,7 @@ export function ComicHero({
               }}
             >
               <BookOpenIcon className="size-4" />
-              {readingTarget.isContinue ? '继续阅读' : '开始阅读'}
+              {getComicReadingActionLabel(readingTarget)}
             </Link>
           </Button>
           <Button

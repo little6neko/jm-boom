@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { BookmarkCheckIcon, BookmarkIcon, BookOpenIcon, DownloadIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import type { ComicReadingTarget } from './reading-target'
+import { getComicReadingActionLabel, type ComicReadingTarget } from './reading-target'
 
 export function ComicDetailFloatingActions({
   albumId,
@@ -35,7 +35,7 @@ export function ComicDetailFloatingActions({
           search={{ albumId, page: readingTarget.page }}
         >
           <BookOpenIcon className="size-4" />
-          {readingTarget.isContinue ? '继续阅读' : '开始阅读'}
+          {getComicReadingActionLabel(readingTarget)}
         </Link>
       </Button>
       <Button
