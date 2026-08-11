@@ -10,7 +10,7 @@ permissions:
   packages: write
 
 env:
-  IMAGE_NAME: ghcr.io/ppxb/jm-boom
+  IMAGE_NAME: ghcr.io/little6neko/jm-boom
 
 jobs:
   version:
@@ -145,12 +145,11 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=false
           tags: |
-            type=semver,pattern={{raw}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=sha,prefix=sha-,format=short
             type=raw,value=latest
+            type=ref,event=tag
 
       - name: Build and push (multi-arch)
         id: push

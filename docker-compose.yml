@@ -2,7 +2,7 @@ name: jm-boom
 
 services:
   jm-boom:
-    image: ghcr.io/ppxb/jm-boom:latest
+    image: ghcr.io/little6neko/jm-boom:latest
     container_name: jm-boom
     ports:
       - "3000:3000"

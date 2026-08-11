@@ -7,7 +7,7 @@
 公开镜像：
 
 ```text
-ghcr.io/ppxb/jm-boom
+ghcr.io/little6neko/jm-boom
 ```
 
 直接使用 Docker 运行（请替换访问密码）：
@@ -20,7 +20,7 @@ docker run -d \
   -p 3000:3000 \
   -v jm-boom-data:/app/data \
   -e JM_BOOM_ACCESS_PASSWORD="change-this-password" \
-  ghcr.io/ppxb/jm-boom:latest
+  ghcr.io/little6neko/jm-boom:latest
 ```
 
 使用仓库中的 Compose 部署：

@@ -30,7 +30,7 @@
 - 服务启动后后台探测内置兜底与动态发现端点；探测完成前使用两个兜底故障切换，完成后自动模式选择最优端点。后台每 2 小时刷新，设置页手动探测与定时探测串行执行，并保留手动选择优先级。
 - Docker 使用单容器同源部署：Axum 托管 `web/dist` 并提供 SPA fallback，未知 `/api` 路由保持 JSON 404，运行数据统一持久化到 `/app/data`。
 - `JM_BOOM_ACCESS_PASSWORD` 只启用轻量前端访问门禁：服务端校验登录请求，前端使用 `sessionStorage` 控制页面进入，业务 API 当前不鉴权。
-- 镜像发布到 `ghcr.io/ppxb/jm-boom`；Git tag `v*.*.*` 触发 GitHub Actions 构建 AMD64/ARM64 镜像并发布版本、`latest` 与 `sha-*` 标签。
+- 镜像发布到 `ghcr.io/little6neko/jm-boom`；Git tag `v*.*.*` 触发一次 GitHub Actions 运行，构建 AMD64/ARM64 镜像并仅发布对应的 `vX.Y.Z` 与 `latest` 标签。
 - 读取或写入中文文件时显式使用 UTF-8。文件编辑使用 `apply_patch`，并保留用户已有的无关改动。
 
 ## 当前优化顺序

@@ -35,7 +35,7 @@ ARG REVISION=unknown
 
 LABEL org.opencontainers.image.title="JM Boom" \
       org.opencontainers.image.description="JM Boom React Web frontend and Axum backend" \
-      org.opencontainers.image.source="https://github.com/ppxb/jm-boom" \
+      org.opencontainers.image.source="https://github.com/little6neko/jm-boom" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${REVISION}"
 
