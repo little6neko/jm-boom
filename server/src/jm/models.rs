@@ -1,6 +1,6 @@
 use super::serde_ext::{
-    bool_from_any, lossy_string_vec_from_array_or_scalar, optional_string_from_any,
-    string_from_any, string_from_any_or_default, u32_from_any,
+    bool_from_any, lossy_string_vec_from_array_or_scalar, optional_positive_i64_from_any,
+    optional_string_from_any, string_from_any, string_from_any_or_default, u32_from_any,
 };
 use serde::Deserialize;
 
@@ -162,6 +162,8 @@ pub(crate) struct ComicDetailPayload {
     pub description: String,
     #[serde(default)]
     pub image: String,
+    #[serde(default, deserialize_with = "optional_positive_i64_from_any")]
+    pub addtime: Option<i64>,
     #[serde(default, deserialize_with = "lossy_string_vec_from_array_or_scalar")]
     pub author: Vec<String>,
     #[serde(default, deserialize_with = "lossy_string_vec_from_array_or_scalar")]
@@ -269,6 +271,7 @@ mod tests {
         let detail: ComicDetailPayload = serde_json::from_value(serde_json::json!({
             "id": 54321,
             "name": "detail",
+            "addtime": "1786371000",
             "author": "single-author",
             "tags": 7,
             "actors": ["actor-a", 8, false],
@@ -292,6 +295,7 @@ mod tests {
         assert_eq!(detail.total_views, 1001);
         assert_eq!(detail.likes, 1);
         assert_eq!(detail.comment_total, 0);
+        assert_eq!(detail.addtime, Some(1_786_371_000));
         assert_eq!(detail.related_list[0].id, "9");
         assert_eq!(detail.series[0].id, "10");
     }
@@ -333,5 +337,25 @@ mod tests {
             serde_json::from_value(serde_json::json!({ "is_favorite": "1" }))
                 .expect("decode favorite state");
         assert!(state.is_favorite);
+    }
+
+    #[test]
+    fn ignores_invalid_or_non_positive_detail_timestamps() {
+        for addtime in [
+            serde_json::Value::Null,
+            serde_json::json!(0),
+            serde_json::json!(-1),
+            serde_json::json!("not-a-timestamp"),
+            serde_json::json!(true),
+        ] {
+            let detail: ComicDetailPayload = serde_json::from_value(serde_json::json!({
+                "id": "1",
+                "name": "detail",
+                "addtime": addtime,
+                "series": [{ "id": "2" }]
+            }))
+            .expect("decode invalid timestamps as missing");
+            assert_eq!(detail.addtime, None);
+        }
     }
 }

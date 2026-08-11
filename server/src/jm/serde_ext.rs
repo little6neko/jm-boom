@@ -68,6 +68,23 @@ where
         .unwrap_or_default())
 }
 
+pub(crate) fn optional_positive_i64_from_any<'de, D>(
+    deserializer: D,
+) -> Result<Option<i64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+    let parsed = match value {
+        serde_json::Value::Number(value) => value
+            .as_i64()
+            .or_else(|| value.as_u64().and_then(|value| i64::try_from(value).ok())),
+        serde_json::Value::String(value) => value.trim().parse::<i64>().ok(),
+        _ => None,
+    };
+    Ok(parsed.filter(|value| *value > 0))
+}
+
 pub(crate) fn bool_from_any<'de, D>(deserializer: D) -> Result<bool, D::Error>
 where
     D: serde::Deserializer<'de>,

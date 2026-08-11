@@ -18,6 +18,7 @@ export type ComicChapter = {
 }
 
 export type ComicDetail = Omit<ComicSummary, 'author'> & {
+  updatedAt: number | null
   authors: string[]
   actors: string[]
   works: string[]

@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import type { ComicDetail } from '@/domain/comic'
 import { getComicDisplayChapterCount } from '@/lib/comic'
-import { formatNumber } from '@/lib/format'
+import { formatNumber, formatUnixDateTime } from '@/lib/format'
 import { ComicDetailFloatingActions } from './floating-actions'
 import type { ComicReadingTarget } from './reading-target'
 import { ComicCover } from './shared'
@@ -43,6 +43,8 @@ export function ComicHero({
   downloadBusy?: boolean
   favoriteBusy?: boolean
 }) {
+  const updatedAt = formatUnixDateTime(comic.updatedAt)
+
   return (
     <section className="grid gap-6 md:grid-cols-[220px_minmax(0,1fr)] lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-8">
       <ComicCover
@@ -64,6 +66,9 @@ export function ComicHero({
             <UserRoundIcon className="size-4" />
             <SearchLinks items={comic.authors} fallback="N/A" className="min-w-0" />
           </div>
+          {updatedAt ? (
+            <div className="text-xs text-muted-foreground">更新日期 {updatedAt}</div>
+          ) : null}
         </div>
 
         <Separator />

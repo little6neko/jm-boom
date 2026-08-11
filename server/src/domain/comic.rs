@@ -4,6 +4,7 @@ pub struct ComicDetail {
     pub title: String,
     pub description: String,
     pub image: String,
+    pub updated_at: Option<i64>,
     pub authors: Vec<String>,
     pub tags: Vec<String>,
     pub actors: Vec<String>,

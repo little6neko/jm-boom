@@ -42,6 +42,20 @@ export function formatDate(value: number) {
   return CHINESE_DATE_TIME_FORMATTER.format(new Date(value))
 }
 
+export function formatUnixDateTime(value: number | null | undefined) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    return null
+  }
+
+  const date = new Date(value * 1000)
+  if (Number.isNaN(date.getTime())) {
+    return null
+  }
+
+  const pad = (part: number) => String(part).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
 export function formatNumber(value: number) {
   return (value >= 10000 ? COMPACT_NUMBER_FORMATTER : STANDARD_NUMBER_FORMATTER).format(value)
 }

@@ -124,38 +124,7 @@ impl JmClient {
             .get(endpoint, "album", &[("id", comic_id.to_string())])
             .await?;
 
-        Ok(ComicDetail {
-            id: payload.id,
-            title: payload.name,
-            description: payload.description,
-            image: payload.image,
-            authors: payload.author,
-            tags: payload.tags,
-            actors: payload.actors,
-            works: payload.works,
-            total_views: payload.total_views,
-            likes: payload.likes,
-            comment_count: payload.comment_total,
-            related_comics: payload
-                .related_list
-                .into_iter()
-                .map(|related| RelatedComic {
-                    id: related.id,
-                    title: related.name,
-                    author: related.author,
-                    image: related.image,
-                })
-                .collect(),
-            chapters: payload
-                .series
-                .into_iter()
-                .map(|chapter| ComicChapter {
-                    id: chapter.id,
-                    title: chapter.name,
-                    sort: chapter.sort,
-                })
-                .collect(),
-        })
+        Ok(map_comic_detail_payload(payload))
     }
 
     pub async fn get_favorite_page(
@@ -226,6 +195,42 @@ impl Default for JmClient {
     }
 }
 
+fn map_comic_detail_payload(payload: ComicDetailPayload) -> ComicDetail {
+    ComicDetail {
+        id: payload.id,
+        title: payload.name,
+        description: payload.description,
+        image: payload.image,
+        updated_at: payload.addtime,
+        authors: payload.author,
+        tags: payload.tags,
+        actors: payload.actors,
+        works: payload.works,
+        total_views: payload.total_views,
+        likes: payload.likes,
+        comment_count: payload.comment_total,
+        related_comics: payload
+            .related_list
+            .into_iter()
+            .map(|related| RelatedComic {
+                id: related.id,
+                title: related.name,
+                author: related.author,
+                image: related.image,
+            })
+            .collect(),
+        chapters: payload
+            .series
+            .into_iter()
+            .map(|chapter| ComicChapter {
+                id: chapter.id,
+                title: chapter.name,
+                sort: chapter.sort,
+            })
+            .collect(),
+    }
+}
+
 // Helper to filter unsupported sections
 fn is_unsupported_section(title: &str) -> bool {
     let title = title.trim();
@@ -244,7 +249,8 @@ fn is_unsupported_section(title: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::is_unsupported_section;
+    use super::{is_unsupported_section, map_comic_detail_payload};
+    use crate::jm::models::ComicDetailPayload;
 
     #[test]
     fn filters_unsupported_home_sections() {
@@ -253,6 +259,38 @@ mod tests {
         }
 
         assert!(!is_unsupported_section("每周推荐"));
+    }
+
+    #[test]
+    fn maps_the_comic_update_from_album_addtime() {
+        let payload: ComicDetailPayload = serde_json::from_value(serde_json::json!({
+            "id": "1",
+            "name": "Example",
+            "addtime": "100",
+            "series": [
+                { "id": "10" },
+                { "id": "11" },
+                { "id": "12" }
+            ]
+        }))
+        .expect("decode comic detail payload");
+
+        let detail = map_comic_detail_payload(payload);
+        assert_eq!(detail.updated_at, Some(100));
+        assert_eq!(detail.chapters.len(), 3);
+    }
+
+    #[test]
+    fn keeps_a_missing_album_update_optional() {
+        let payload: ComicDetailPayload = serde_json::from_value(serde_json::json!({
+            "id": "1",
+            "name": "Example",
+            "series": [{ "id": "10" }]
+        }))
+        .expect("decode comic detail payload");
+
+        let detail = map_comic_detail_payload(payload);
+        assert_eq!(detail.updated_at, None);
     }
 }
 

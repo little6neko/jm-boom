@@ -16,6 +16,7 @@ type ComicDetailResponse = {
   title: string
   description: string
   image: string
+  updatedAt: number | null
   authors: string[]
   tags: string[]
   actors: string[]
@@ -118,6 +119,7 @@ function mapComicDetail(response: ComicDetailResponse): ComicDetail {
     title: response.title,
     description: response.description,
     image: response.image,
+    updatedAt: response.updatedAt,
     authors: response.authors,
     tags: response.tags,
     actors: response.actors,
