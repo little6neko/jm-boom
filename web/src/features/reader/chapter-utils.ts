@@ -23,8 +23,10 @@ export function resolveReaderChapterInfo({
 }
 
 export function toReaderChapterItems(chapters: ComicChapter[]): ReaderChapterItem[] {
-  return sortComicChapters(chapters).map((chapter, index) => ({
+  const sortedChapters = sortComicChapters(chapters)
+
+  return sortedChapters.map(chapter => ({
     id: chapter.id,
-    title: formatComicChapterTitle(chapter, index)
+    title: formatComicChapterTitle(chapter, sortedChapters)
   }))
 }

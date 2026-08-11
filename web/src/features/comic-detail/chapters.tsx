@@ -17,7 +17,7 @@ import {
 import type { ComicChapter } from '@/domain/comic'
 import {
   SINGLE_CHAPTER_TITLE,
-  formatComicChapterTitle,
+  getComicChapterPresentation,
   getComicDisplayChapterCount
 } from '@/lib/comic'
 import { UI } from '@/lib/constants'
@@ -44,6 +44,7 @@ export function ChaptersSection({
     (safePage - 1) * UI.CHAPTER_PAGE_SIZE,
     safePage * UI.CHAPTER_PAGE_SIZE
   )
+  const numberingChapters = descending ? sortedChapters : [...sortedChapters].reverse()
 
   useEffect(() => {
     setPage(current => Math.min(current, pageCount))
@@ -98,9 +99,8 @@ export function ChaptersSection({
       ) : (
         <>
           <div className="space-y-2">
-            {visibleChapters.map((chapter, index) => {
-              const chapterIndex = (safePage - 1) * UI.CHAPTER_PAGE_SIZE + index
-              const chapterTitle = formatComicChapterTitle(chapter, chapterIndex)
+            {visibleChapters.map(chapter => {
+              const presentation = getComicChapterPresentation(chapter, numberingChapters)
 
               return (
                 <Link
@@ -115,12 +115,12 @@ export function ChaptersSection({
                   <Card size="sm" className="py-0 transition-colors hover:bg-muted/40">
                     <CardContent className="flex items-center justify-between gap-4 p-4">
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-medium">{chapterTitle}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {chapter.sort
-                            ? `第 ${chapter.sort} 章`
-                            : `章节 ${(safePage - 1) * UI.CHAPTER_PAGE_SIZE + index + 1}`}
-                        </div>
+                        <div className="truncate text-sm font-medium">{presentation.title}</div>
+                        {presentation.hasOriginalTitle ? (
+                          <div className="text-xs text-muted-foreground">
+                            {presentation.episodeLabel}
+                          </div>
+                        ) : null}
                       </div>
                       <Badge variant="outline">JM {chapter.id}</Badge>
                     </CardContent>

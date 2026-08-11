@@ -13,8 +13,8 @@ export function useComicDownload(comic: ComicDetail, sortedChapters: ComicChapte
   const queryClient = useQueryClient()
   const [isOpen, setIsOpen] = useState(false)
   const chapters = useMemo(
-    () => toDownloadChapterOptions(comic.id, sortedChapters),
-    [comic.id, sortedChapters]
+    () => toDownloadChapterOptions(comic.id, sortedChapters, comic.chapters),
+    [comic.chapters, comic.id, sortedChapters]
   )
   const mutation = useMutation({
     mutationFn: (selectedChapters: DownloadChapterOption[]) =>
@@ -52,7 +52,11 @@ export function useComicDownload(comic: ComicDetail, sortedChapters: ComicChapte
   }
 }
 
-function toDownloadChapterOptions(comicId: string, chapters: ComicChapter[]) {
+function toDownloadChapterOptions(
+  comicId: string,
+  chapters: ComicChapter[],
+  numberingChapters: ComicChapter[]
+) {
   if (chapters.length === 0) {
     return [
       {
@@ -65,7 +69,7 @@ function toDownloadChapterOptions(comicId: string, chapters: ComicChapter[]) {
 
   return chapters.map((chapter, index) => ({
     chapterId: chapter.id,
-    title: formatComicChapterTitle(chapter, index),
+    title: formatComicChapterTitle(chapter, numberingChapters),
     order: index + 1
   }))
 }
