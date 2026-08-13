@@ -1,7 +1,11 @@
 import { createFileRoute, Outlet, useRouterState } from '@tanstack/react-router'
 import { BookmarkIcon, CompassIcon, DownloadIcon, SettingsIcon, ShellIcon } from 'lucide-react'
 
-import { FloatingNav, type FloatingNavItem } from '@/components/floating-nav'
+import {
+  FloatingNav,
+  resolveFloatingNavActiveId,
+  type FloatingNavItem
+} from '@/components/floating-nav'
 
 export const Route = createFileRoute('/_app')({
   component: AppRoute
@@ -19,12 +23,11 @@ function AppRoute() {
   const pathname = useRouterState({
     select: state => state.location.pathname
   })
-  const activeId = NAV_ITEMS.find(item => pathname.startsWith(item.to))?.id
-  const showNav = !pathname.startsWith('/comic/')
+  const activeId = resolveFloatingNavActiveId(pathname, NAV_ITEMS)
 
   return (
     <div className="relative min-h-dvh">
-      {showNav ? <FloatingNav items={NAV_ITEMS} activeId={activeId} /> : null}
+      <FloatingNav items={NAV_ITEMS} activeId={activeId} />
       <Outlet />
     </div>
   )

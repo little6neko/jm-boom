@@ -18,7 +18,6 @@ import { Separator } from '@/components/ui/separator'
 import type { ComicDetail } from '@/domain/comic'
 import { getComicDisplayChapterCount } from '@/lib/comic'
 import { formatNumber, formatUnixDateTime } from '@/lib/format'
-import { ComicDetailFloatingActions } from './floating-actions'
 import { getComicReadingActionLabel, type ComicReadingTarget } from './reading-target'
 import { ComicCover } from './shared'
 
@@ -79,49 +78,15 @@ export function ComicHero({
           {comic.description || '暂无简介'}
         </p>
 
-        <div className="md:hidden">
-          <ComicDetailFloatingActions
-            albumId={comic.id}
-            readingTarget={readingTarget}
-            isFavorite={isFavorite}
-            downloadBusy={downloadBusy}
-            favoriteBusy={favoriteBusy}
-            onFavoriteClick={onFavoriteClick}
-            onDownloadClick={onDownloadClick}
-          />
-        </div>
-
-        <div className="hidden flex-wrap gap-2 md:flex">
-          <Button asChild>
-            <Link
-              to="/reader/$comicId"
-              params={{ comicId: readingTarget.readId }}
-              search={{
-                albumId: comic.id,
-                page: readingTarget.page
-              }}
-            >
-              <BookOpenIcon className="size-4" />
-              {getComicReadingActionLabel(readingTarget)}
-            </Link>
-          </Button>
-          <Button
-            variant={isFavorite ? 'secondary' : 'outline'}
-            disabled={favoriteBusy}
-            onClick={onFavoriteClick}
-          >
-            {isFavorite ? (
-              <BookmarkCheckIcon className="size-4" />
-            ) : (
-              <BookmarkIcon className="size-4" />
-            )}
-            {isFavorite ? '已收藏' : '收藏'}
-          </Button>
-          <Button variant="outline" disabled={downloadBusy} onClick={onDownloadClick}>
-            <DownloadIcon className="size-4" />
-            下载
-          </Button>
-        </div>
+        <ComicActions
+          albumId={comic.id}
+          readingTarget={readingTarget}
+          isFavorite={isFavorite}
+          downloadBusy={downloadBusy}
+          favoriteBusy={favoriteBusy}
+          onFavoriteClick={onFavoriteClick}
+          onDownloadClick={onDownloadClick}
+        />
 
         <div className="space-y-3">
           <PillGroup title="标签" items={comic.tags} mobileProminent />
@@ -130,6 +95,65 @@ export function ComicHero({
         </div>
       </div>
     </section>
+  )
+}
+
+function ComicActions({
+  albumId,
+  readingTarget,
+  isFavorite,
+  downloadBusy,
+  favoriteBusy,
+  onFavoriteClick,
+  onDownloadClick
+}: {
+  albumId: string
+  readingTarget: ComicReadingTarget
+  isFavorite: boolean
+  downloadBusy: boolean
+  favoriteBusy: boolean
+  onFavoriteClick: () => void
+  onDownloadClick: () => void
+}) {
+  const buttonClassName = 'min-w-0 w-full px-2 text-[11px] sm:text-xs md:w-auto md:px-3 md:text-sm'
+
+  return (
+    <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] gap-1.5 md:flex md:flex-wrap md:gap-2">
+      <Button asChild className={buttonClassName}>
+        <Link
+          to="/reader/$comicId"
+          params={{ comicId: readingTarget.readId }}
+          search={{ albumId, page: readingTarget.page }}
+        >
+          <BookOpenIcon className="size-4" />
+          {getComicReadingActionLabel(readingTarget)}
+        </Link>
+      </Button>
+      <Button
+        type="button"
+        variant={isFavorite ? 'secondary' : 'outline'}
+        className={buttonClassName}
+        disabled={favoriteBusy}
+        onClick={onFavoriteClick}
+      >
+        {isFavorite ? (
+          <BookmarkCheckIcon className="size-4" />
+        ) : (
+          <BookmarkIcon className="size-4" />
+        )}
+        {isFavorite ? '已收藏' : '收藏'}
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        className={buttonClassName}
+        disabled={downloadBusy}
+        onClick={onDownloadClick}
+      >
+        <DownloadIcon className="size-4" />
+        下载
+      </Button>
+    </div>
   )
 }
 

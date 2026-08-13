@@ -14,6 +14,8 @@ export type FloatingNavItem = {
   to: FloatingNavTo
 }
 
+type FloatingNavRouteItem = Pick<FloatingNavItem, 'id' | 'to'>
+
 type FloatingNavProps = {
   items: FloatingNavItem[]
   activeId: string | undefined
@@ -29,6 +31,13 @@ export function FloatingNav({ items, activeId }: FloatingNavProps) {
       </ul>
     </nav>
   )
+}
+
+export function resolveFloatingNavActiveId(
+  pathname: string,
+  items: readonly FloatingNavRouteItem[]
+) {
+  return items.find(item => pathname === item.to || pathname.startsWith(`${item.to}/`))?.id
 }
 
 type NavItemProps = {
