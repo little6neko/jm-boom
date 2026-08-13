@@ -313,7 +313,7 @@ export function ReaderStripWindow({
               )}px)`
             }}
           >
-            滚动进入下一章
+            滚动进入下一话
           </div>
         ) : null}
       </div>

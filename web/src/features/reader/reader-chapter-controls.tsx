@@ -48,20 +48,20 @@ export function ReaderChapterControls({
       <div className="flex w-full items-center justify-between gap-2 sm:gap-3">
         <div className="flex min-w-0 items-center gap-1.5">
           <ChapterNavButton
-            label="上一章"
+            label="上一话"
             albumId={albumId}
             chapter={hasChapterNavigation ? previousChapter : null}
           >
             <ChevronLeftIcon className="size-5 sm:size-4" />
-            <span className="hidden sm:inline">上一章</span>
+            <span className="hidden sm:inline">上一话</span>
           </ChapterNavButton>
 
           <ChapterNavButton
-            label="下一章"
+            label="下一话"
             albumId={albumId}
             chapter={hasChapterNavigation ? nextChapter : null}
           >
-            <span className="hidden sm:inline">下一章</span>
+            <span className="hidden sm:inline">下一话</span>
             <ChevronRightIcon className="size-5 sm:size-4" />
           </ChapterNavButton>
 
